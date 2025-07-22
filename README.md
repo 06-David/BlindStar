@@ -368,13 +368,6 @@ class CameraConfig:
     FPS = 30                     # 帧率
 ```
 
-### Web应用配置
-```python
-class WebConfig:
-    HOST = '0.0.0.0'            # 服务器地址
-    PORT = 5000                 # 端口号
-    MAX_CONTENT_LENGTH = 500MB   # 最大上传文件大小
-```
 
 ## 🔧 高级功能
 
@@ -449,10 +442,6 @@ class CustomDetector(YOLOv8Detector):
         return filtered_detections
 ```
 
-### 扩展Web界面
-1. 修改 `templates/index.html` 添加新UI组件
-2. 在 `static/js/app.js` 中添加JavaScript功能
-3. 在 `app.py` 中添加对应的API端点
 
 ## 🐛 故障排除
 
@@ -483,9 +472,6 @@ class CustomDetector(YOLOv8Detector):
 # 启用详细日志
 python main.py --source 0 --verbose
 
-# 查看Web应用日志
-tail -f logs/app.log
-
 # 检查分析日志
 ls logs/*/detailed_analysis_*.log
 ```
@@ -512,7 +498,6 @@ ls logs/*/detailed_analysis_*.log
 - [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) - 物体检测框架
 - [MiDaS](https://github.com/isl-org/MiDaS) - 深度估计模型
 - [OpenCV](https://opencv.org) - 计算机视觉库
-- [Flask](https://flask.palletsprojects.com) - Web框架
 
 ---
 
