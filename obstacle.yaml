@@ -1,0 +1,29 @@
+path: C:\MyCode\BlindStar\datasets
+train: images/train
+val: images/val
+nc: 24
+names:
+  0: person
+  1: bicycle
+  2: car
+  3: traffic cone
+  4: barrier
+  5: curb
+  6: manhole
+  7: stairs
+  8: railing
+  9: pole
+  10: water
+  11: sand
+  12: snow
+  13: tripod
+  14: barrel
+  15: motorcycle
+  16: bus
+  17: train
+  18: truck
+  19: traffic light
+  20: fire hydrant
+  21: stop sign
+  22: bench
+  23: chair 

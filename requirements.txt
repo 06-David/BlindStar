@@ -1,0 +1,31 @@
+# BlindStar - Intelligent Visual Assistance System
+# Core dependencies
+ultralytics>=8.0.0
+torch>=2.0.0
+torchvision>=0.15.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# Distance measurement (MiDaS)
+timm>=0.9.0
+
+# Video processing and utilities
+matplotlib>=3.7.0
+pandas>=2.0.0
+
+# Performance and optimization
+psutil>=5.9.0
+tqdm>=4.65.0
+
+# Optional: Text-to-speech (Windows)
+pywin32>=306; sys_platform == "win32"
+
+# Optional: GPU acceleration
+# tensorrt>=8.6.0  # Uncomment for TensorRT support
+# onnxruntime-gpu>=1.15.0  # Uncomment for ONNX GPU support
+
+# Development and testing
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
