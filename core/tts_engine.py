@@ -49,12 +49,37 @@ class TTSEngine:
             self.speak("前方安全")
             return
 
+        # 处理DetectionResult对象或字典
+        processed_detections = []
+        for detection in detections:
+            if hasattr(detection, 'distance') and hasattr(detection, 'class_name'):
+                # DetectionResult对象
+                processed_detections.append({
+                    'name': detection.class_name,
+                    'distance': detection.distance if detection.distance is not None else 999,
+                    'position_x': detection.center[0] if hasattr(detection, 'center') else 0.5
+                })
+            elif isinstance(detection, dict):
+                # 字典格式
+                processed_detections.append(detection)
+            else:
+                continue
+
+        if not processed_detections:
+            self.speak("前方安全")
+            return
+
         # 找到最近物体
-        closest = min(detections, key=lambda x: x['distance'])
-        direction = self._get_direction(closest['position_x'])
+        closest = min(processed_detections, key=lambda x: x.get('distance', 999))
+        direction = self._get_direction(closest.get('position_x', 0.5))
 
         # 生成播报文本
-        text = f"{direction}{closest['distance']:.1f}米处有{closest['name']}"
+        distance = closest.get('distance', 0)
+        name = closest.get('name', '物体')
+        if distance < 1000:
+            text = f"{direction}{distance:.1f}米处有{name}"
+        else:
+            text = f"{direction}{distance/1000:.1f}公里处有{name}"
         self.speak(text)
 
     def _get_direction(self, position_x: float) -> str:

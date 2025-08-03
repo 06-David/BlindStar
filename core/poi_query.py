@@ -2,6 +2,10 @@ import requests
 import json
 from typing import Dict, List, Optional
 import logging
+import urllib3
+
+# 禁用SSL警告
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class POIQuery:
@@ -14,10 +18,14 @@ class POIQuery:
         """
         self.api_key = api_key
         self.base_url = "https://restapi.amap.com/v3/place/around"
+        self.ip_location_url = "https://restapi.amap.com/v3/ip"
         self.logger = logging.getLogger(__name__)
 
         # 默认位置（北京天安门）
         self.default_location = "116.397428,39.99923"
+        
+        # 缓存当前位置
+        self._current_location = None
 
         # 完整的POI类型映射（根据高德API分类）
         self.poi_types = {
@@ -47,7 +55,7 @@ class POIQuery:
             "酒店": "100000", "宾馆": "100000", "厕所": "200300"
         }
 
-    def search_nearby(self, keyword: str, location: str = None, radius: int = 1000) -> List[Dict]:
+    def search_nearby(self, keyword: str, location: Optional[str] = None, radius: int = 1000) -> List[Dict]:
         """
         搜索周边POI（兴趣点）
 
@@ -60,7 +68,12 @@ class POIQuery:
             List[Dict]: POI结果列表，包含名称、类型、地址、距离等信息
         """
         # 确定位置
-        loc = location or self.default_location
+        if location:
+            loc = location
+        else:
+            # 尝试通过IP获取当前位置
+            current_loc = self.get_current_location_by_ip()
+            loc = current_loc or self.default_location
 
         # 提取关键词对应的POI类型
         poi_type = self._match_poi_type(keyword)
@@ -79,15 +92,28 @@ class POIQuery:
         }
 
         try:
-            self.logger.debug(f"请求高德POI API: {params}")
-            response = requests.get(self.base_url, params=params, timeout=10)
+            self.logger.info(f"POI查询参数: location={loc}, keyword={keyword}, poi_type={poi_type}")
+            self.logger.info(f"请求高德POI API: {params}")
+            # 添加SSL验证禁用和更长的超时时间
+            response = requests.get(
+                self.base_url, 
+                params=params, 
+                timeout=30,
+                verify=False,  # 禁用SSL验证
+                headers={'User-Agent': 'BlindStar/1.0'}
+            )
             response.raise_for_status()  # 检查HTTP错误
 
             data = response.json()
             self.logger.debug(f"API响应: {json.dumps(data, ensure_ascii=False)[:500]}...")
 
             if data.get("status") == "1":
-                return self._process_results(data.get("pois", []))
+                pois = data.get("pois", [])
+                if isinstance(pois, list):
+                    return self._process_results(pois)
+                else:
+                    self.logger.error(f"POI数据格式错误: {type(pois)}")
+                    return []
             else:
                 error_info = data.get('info', '未知错误')
                 self.logger.error(f"POI查询失败: {error_info}")
@@ -98,6 +124,9 @@ class POIQuery:
             return []
         except json.JSONDecodeError:
             self.logger.error("POI响应解析失败")
+            return []
+        except Exception as e:
+            self.logger.error(f"POI查询未知错误: {e}")
             return []
 
     def _match_poi_type(self, keyword: str) -> str:
@@ -121,6 +150,62 @@ class POIQuery:
 
         return ""
 
+    def get_current_location_by_ip(self) -> Optional[str]:
+        """
+        通过IP获取当前位置
+
+        Returns:
+            Optional[str]: 经纬度坐标字符串，格式为"经度,纬度"，失败返回None
+        """
+        if self._current_location:
+            return self._current_location
+
+        try:
+            self.logger.info("正在通过IP获取当前位置...")
+            
+            params = {
+                "key": self.api_key,
+                "output": "json"
+            }
+            
+            response = requests.get(
+                self.ip_location_url,
+                params=params,
+                timeout=10,
+                verify=False,
+                headers={'User-Agent': 'BlindStar/1.0'}
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            self.logger.debug(f"IP定位响应: {json.dumps(data, ensure_ascii=False)}")
+            
+            if data.get("status") == "1":
+                location = data.get("rectangle", "")
+                if location:
+                    # rectangle格式为"经度1,纬度1;经度2,纬度2"，取中心点
+                    coords = location.split(";")
+                    if len(coords) == 2:
+                        # 计算中心点
+                        coord1 = coords[0].split(",")
+                        coord2 = coords[1].split(",")
+                        if len(coord1) == 2 and len(coord2) == 2:
+                            lng1, lat1 = float(coord1[0]), float(coord1[1])
+                            lng2, lat2 = float(coord2[0]), float(coord2[1])
+                            center_lng = (lng1 + lng2) / 2
+                            center_lat = (lat1 + lat2) / 2
+                            
+                            self._current_location = f"{center_lng:.6f},{center_lat:.6f}"
+                            self.logger.info(f"获取到当前位置: {self._current_location}")
+                            return self._current_location
+            
+            self.logger.warning("IP定位失败，使用默认位置")
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"IP定位异常: {e}")
+            return None
+
     def _process_results(self, pois: list) -> List[Dict]:
         """
         处理API返回的POI结果
@@ -133,27 +218,41 @@ class POIQuery:
         """
         results = []
         for poi in pois:
-            # 获取POI位置
-            poi_location = poi.get("location", "")
-            longitude, latitude = poi_location.split(",") if poi_location else (0, 0)
+            # 检查poi是否为字典类型
+            if not isinstance(poi, dict):
+                self.logger.warning(f"跳过非字典类型的POI数据: {type(poi)}")
+                continue
+                
+            try:
+                # 获取POI位置
+                poi_location = poi.get("location", "")
+                longitude, latitude = poi_location.split(",") if poi_location else (0, 0)
 
-            # 计算距离（米）
-            distance = float(poi.get("distance", 0))
+                # 计算距离（米）
+                distance = float(poi.get("distance", 0))
 
-            results.append({
-                "id": poi.get("id", ""),
-                "name": poi.get("name", "未知地点"),
-                "type": poi.get("type", ""),
-                "address": poi.get("address", ""),
-                "distance": distance,  # 单位为米
-                "distance_km": distance / 1000,  # 单位为公里
-                "longitude": longitude,
-                "latitude": latitude,
-                "tel": poi.get("tel", ""),
-                "photos": poi.get("photos", []),
-                "rating": poi.get("biz_ext", {}).get("rating", ""),
-                "cost": poi.get("biz_ext", {}).get("cost", "")
-            })
+                # 安全获取biz_ext字段
+                biz_ext = poi.get("biz_ext", {})
+                if isinstance(biz_ext, list):
+                    biz_ext = {}
+                
+                results.append({
+                    "id": poi.get("id", ""),
+                    "name": poi.get("name", "未知地点"),
+                    "type": poi.get("type", ""),
+                    "address": poi.get("address", ""),
+                    "distance": distance,  # 单位为米
+                    "distance_km": distance / 1000,  # 单位为公里
+                    "longitude": longitude,
+                    "latitude": latitude,
+                    "tel": poi.get("tel", ""),
+                    "photos": poi.get("photos", []),
+                    "rating": biz_ext.get("rating", "") if isinstance(biz_ext, dict) else "",
+                    "cost": biz_ext.get("cost", "") if isinstance(biz_ext, dict) else ""
+                })
+            except Exception as e:
+                self.logger.error(f"处理POI数据时出错: {e}, 数据: {poi}")
+                continue
 
         # 按距离排序（从近到远）
         return sorted(results, key=lambda x: x["distance"])
@@ -202,7 +301,7 @@ class POIQuery:
         Returns:
             Optional[Dict]: POI详细信息，如果失败返回None
         """
-        detail_url = "https://restapi.amap.com/v3/place/detail"
+        detail_url = "http://restapi.amap.com/v3/place/detail"
 
         params = {
             "key": self.api_key,

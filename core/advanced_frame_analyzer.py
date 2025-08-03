@@ -243,7 +243,7 @@ class AdvancedFrameAnalyzer:
                     'bbox': bbox,
                     'center': [center_x, center_y],
                     'area': float(getattr(detection, 'area', (bbox[2]-bbox[0])*(bbox[3]-bbox[1]))),
-                    'distance_meters': getattr(detection, 'distance_meters', None),
+                    'distance_meters': getattr(detection, 'distance', None),
                     'depth_confidence': getattr(detection, 'depth_confidence', None)
                 }
         except Exception as e:
@@ -359,7 +359,7 @@ class AdvancedFrameAnalyzer:
                     width=float(width),
                     height=float(height),
                     area=float(getattr(detection, 'area', width * height)),
-                    distance_meters=getattr(detection, 'distance_meters', None),
+                    distance_meters=getattr(detection, 'distance', None),
                     depth_confidence=getattr(detection, 'depth_confidence', None),
                     min_depth=getattr(detection, 'min_depth', None),
                     max_depth=getattr(detection, 'max_depth', None),

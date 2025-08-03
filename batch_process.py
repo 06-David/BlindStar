@@ -36,7 +36,7 @@ def create_config_from_args(args) -> BatchProcessingConfig:
         device=args.device,
         confidence_threshold=args.confidence,
         max_frames_per_video=args.max_frames,
-        enable_distance=not args.no_distance,
+        enable_distance=True,
         output_base_dir=args.output_dir,
         parallel_processing=args.parallel,
         max_workers=args.workers,
@@ -191,8 +191,6 @@ def main():
                               help='检测置信度阈值')
         
         # 处理配置
-        subparser.add_argument('--no-distance', action='store_true',
-                              help='禁用距离测量')
         subparser.add_argument('--recursive', action='store_true', default=True,
                               help='递归搜索子目录')
         subparser.add_argument('--output-dir', default='logs/batch_processing',

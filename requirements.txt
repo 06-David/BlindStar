@@ -18,6 +18,13 @@ pandas>=2.0.0
 psutil>=5.9.0
 tqdm>=4.65.0
 
+# Text-to-speech
+pyttsx3>=2.90
+
+# Speech recognition (Vosk)
+vosk>=0.3.45
+pyaudio>=0.2.11
+
 # Optional: Text-to-speech (Windows)
 pywin32>=306; sys_platform == "win32"
 

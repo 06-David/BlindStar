@@ -3,6 +3,7 @@ MiDaS Distance Measurement Module
 Uses MiDaS depth estimation model to calculate accurate object distances
 """
 
+import warnings
 import torch
 import torch.nn.functional as F
 import cv2

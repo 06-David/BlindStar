@@ -18,7 +18,7 @@ BlindStar是一个专为视障人士设计的智能视觉辅助系统，集成�
 - **🔍 智能物体检测** - 基于YOLOv8，内置 COCO-80 类别，并支持加载**自定义训练权重**
 - **📏 精确距离测量** - MiDaS深度估计，提供准确的空间信息
 - **🏃 运动分析** - 实时速度计算和轨迹跟踪
-- **🎵 语音反馈** - 为视障用户提供音频导航指引
+- **🎵 语音交互** - 基于Vosk的离线语音识别和TTS语音合成
 - **🎬 视频处理** - 支持实时和批量视频分析
 - **🔧 模块化设计** - 易于集成和扩展的组件架构
 
@@ -76,6 +76,9 @@ BlindStar/
 │     ├── frame_analyzer.py    # 帧分析器
 │     ├── video_processor.py   # 视频处理器
 │     ├── camera.py            # 摄像头控制
+│     ├── tts_engine.py        # 语音合成引擎
+│     ├── stt_engine.py        # Vosk语音识别引擎
+│     ├── poi_query.py         # POI查询模块
 │     └── utils.py             # 工具函数
 │
 ├── 🎥 分析/测试脚本
@@ -146,6 +149,29 @@ with DepthVisualizer(model_type="MiDaS_small", device="auto") as vis:
 
 ```bash
 python generate_depth_video.py input.mp4 --output depth.mp4 --log depth_stats.csv
+```
+
+### 语音系统组件
+
+```python
+from core.tts_engine import TTSEngine
+from core.stt_engine import STTEngine
+
+# 语音合成
+tts = TTSEngine()
+tts.speak("前方有障碍物", blocking=True)
+
+# 语音识别（基于Vosk）
+def on_speech(text):
+    print(f"识别到: {text}")
+    if "附近餐厅" in text:
+        # 处理POI查询
+        pass
+
+stt = STTEngine()
+stt.start_listening(on_speech)
+# ... 使用完毕后
+stt.stop_listening()
 ```
 
 ### 使用独立组件

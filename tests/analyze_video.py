@@ -236,8 +236,7 @@ def main():
                        help='最大处理时长（秒）')
     parser.add_argument('--weights', default='yolov8s.pt',
                        help='YOLOv8 权重文件路径')
-    parser.add_argument('--no-analysis', action='store_true',
-                       help='只输出检测可视化视频，不生成帧分析日志')
+
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='显示详细日志')
     parser.add_argument('--conf', type=float, default=0.25,
@@ -258,7 +257,7 @@ def main():
         analysis_dir=args.analysis_dir,
         max_duration=args.max_duration,
         model_weights=args.weights,
-        enable_frame_analysis=not args.no_analysis,
+        enable_frame_analysis=True,
         confidence_threshold=args.conf,
         data_yaml=args.data_yaml
     )

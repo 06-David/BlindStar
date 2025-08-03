@@ -123,6 +123,9 @@ data/temp/
 models/*.pt
 models/*.onnx
 !models/README.md
+
+# Vosk speech recognition models
+models/vosk-model-*/
 *.mp4
 *.avi
 *.mov
