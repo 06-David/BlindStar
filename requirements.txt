@@ -1,0 +1,47 @@
+# BlindStar - Intelligent Visual Assistance System
+# Core dependencies
+ultralytics>=8.0.0
+torch>=2.0.0
+torchvision>=0.15.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# Distance measurement (MiDaS)
+timm>=0.9.0
+
+# ZoeDepth for absolute depth estimation
+zoedepth>=1.0.0
+
+# Video processing and utilities
+matplotlib>=3.7.0
+pandas>=2.0.0
+
+# Performance and optimization
+psutil>=5.9.0
+tqdm>=4.65.0
+
+# Text-to-speech
+pyttsx3>=2.90
+
+# Speech recognition (Vosk)
+vosk>=0.3.45
+pyaudio>=0.2.11
+
+# Optional: Text-to-speech (Windows)
+pywin32>=306; sys_platform == "win32"
+
+# Optional: GPU acceleration
+# tensorrt>=8.6.0  # Uncomment for TensorRT support
+# onnxruntime-gpu>=1.15.0  # Uncomment for ONNX GPU support
+
+# Development and testing
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Navigation and POI services
+requests>=2.25.1
+geopy>=2.3.0  # 用于距离计算
+pypinyin  # 新增拼音库，用于POI查询的拼音匹配
+regex    # 新增正则表达式库，用于语音命令解析
