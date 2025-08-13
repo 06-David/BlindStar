@@ -7,8 +7,8 @@ opencv-python>=4.8.0
 numpy>=1.24.0
 Pillow>=10.0.0
 
-# Distance measurement (MiDaS)
-timm>=0.9.0
+# Distance measurement (MiDaS) - Fixed version for ZoeDepth compatibility
+timm==0.6.7
 
 # ZoeDepth for absolute depth estimation
 zoedepth>=1.0.0

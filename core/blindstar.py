@@ -92,7 +92,7 @@ class BlindStar:
                     max_depth=self.max_depth,
                     min_depth=self.min_depth,
                     distance_unit=self.distance_unit,
-                    model_path=r"E:\BlindStar\models\ZoeD_M12_NK.pt"
+                    model_path=r"D:\shenduxuexi\Pycharm\Projects\BlindStar\models\ZoeD_M12_NK.pt"
                 )
             
             # Initialize video processor

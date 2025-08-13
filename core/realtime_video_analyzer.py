@@ -20,6 +20,7 @@ from .distance import ZoeDepthDistanceMeasurement
 from .decision_engine import DecisionEngine, create_decision_context
 from .tts_engine import TTSEngine
 from .navigation_context import NavigationContextManager, NavigationMode, GPSLocation
+from .navigation_fusion import NavigationDecisionFusion
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ class RealtimeVideoAnalyzer:
         self.decision_engine = None
         self.tts_engine = None
         self.nav_context = None
+        self.nav_fusion = None
         
         # 存储初始化参数
         self.yolo_model = yolo_model
@@ -165,6 +167,14 @@ class RealtimeVideoAnalyzer:
                     mode_enum = mode_map.get((self.nav_mode or "assist").lower(), NavigationMode.ASSIST)
                     self.nav_context = NavigationContextManager(mode=mode_enum)
                     logger.info(f"初始化导航上下文: 模式 {mode_enum.value}")
+
+                    # 初始化导航决策融合器
+                    logger.info("初始化导航决策融合器...")
+                    self.nav_fusion = NavigationDecisionFusion(
+                        vision_engine=self.decision_engine,
+                        navigation_context=self.nav_context
+                    )
+
                 except Exception as e:
                     logger.warning(f"导航上下文初始化失败: {e}")
                     self.enable_navigation = False
@@ -227,15 +237,56 @@ class RealtimeVideoAnalyzer:
                     'detections': detection_data
                 }
             )
-            
+
             decision_result = self.decision_engine.make_decision(context)
             decision_output = decision_result.to_dict()
-            
-            # 语音播报（异步）
-            if (self.enable_tts and self.tts_engine and 
-                decision_result.priority >= 3 and  # 只播报重要决策
-                decision_result.speech):
-                
+
+            # 导航决策融合（如果启用）
+            if self.enable_navigation and self.nav_fusion:
+                try:
+                    frame_data = {
+                        'detections': detection_data,
+                        'depth_map': depth_map,
+                        'frame_info': {
+                            'frame_width': frame.shape[1],
+                            'frame_height': frame.shape[0]
+                        }
+                    }
+
+                    nav_decision = self.nav_fusion.make_fused_decision(frame_data)
+                    nav_output = {
+                        'global_instruction': nav_decision.global_instruction,
+                        'local_instruction': nav_decision.avoidance_instruction,
+                        'final_instruction': nav_decision.final_instruction,
+                        'action_type': nav_decision.action_type,
+                        'priority_level': nav_decision.priority_level,
+                        'confidence': nav_decision.confidence
+                    }
+
+                    # 导航语音播报（带节流）
+                    if (self.enable_tts and self.tts_engine and
+                        nav_decision.final_instruction and
+                        nav_decision.priority_level >= 2):  # 避障和紧急情况
+
+                        current_time = time.time()
+                        if (nav_decision.action_type == "emergency" or
+                            current_time - self._last_nav_tts_time > self._nav_tts_interval):
+
+                            self._last_nav_tts_time = current_time
+                            threading.Thread(
+                                target=self._async_speak,
+                                args=(nav_decision.final_instruction,),
+                                daemon=True
+                            ).start()
+
+                except Exception as nav_error:
+                    logger.warning(f"导航决策融合失败: {nav_error}")
+
+            # 原有的语音播报（仅在没有导航时使用）
+            elif (self.enable_tts and self.tts_engine and
+                  decision_result.priority >= 3 and  # 只播报重要决策
+                  decision_result.speech):
+
                 # 异步播报，避免阻塞处理
                 threading.Thread(
                     target=self._async_speak,
@@ -579,6 +630,145 @@ class RealtimeVideoAnalyzer:
             if hasattr(self, key):
                 setattr(self, key, value)
                 logger.info(f"参数已更新: {key} = {value}")
+
+    # 导航相关方法
+    def set_navigation_destination(self, latitude: float, longitude: float,
+                                 altitude: Optional[float] = None) -> bool:
+        """
+        设置导航目的地
+
+        Args:
+            latitude: 纬度 (-90 到 90)
+            longitude: 经度 (-180 到 180)
+            altitude: 海拔（可选）
+
+        Returns:
+            是否设置成功
+        """
+        if not self.enable_navigation or not self.nav_context:
+            logger.warning("导航功能未启用")
+            return False
+
+        # 输入验证
+        if not (-90 <= latitude <= 90):
+            logger.error(f"无效的纬度值: {latitude}，应在-90到90之间")
+            return False
+
+        if not (-180 <= longitude <= 180):
+            logger.error(f"无效的经度值: {longitude}，应在-180到180之间")
+            return False
+
+        if altitude is not None and altitude < -1000:  # 简单的海拔验证
+            logger.warning(f"海拔值可能不合理: {altitude}")
+
+        try:
+            destination = GPSLocation(
+                latitude=latitude,
+                longitude=longitude,
+                altitude=altitude,
+                timestamp=time.time()
+            )
+
+            success = self.nav_context.set_destination(destination)
+            if success:
+                logger.info(f"导航目的地已设置: ({latitude:.6f}, {longitude:.6f})")
+            return success
+
+        except Exception as e:
+            logger.error(f"设置导航目的地失败: {e}")
+            return False
+
+    def update_gps_location(self, latitude: float, longitude: float,
+                           altitude: Optional[float] = None,
+                           accuracy: Optional[float] = None) -> bool:
+        """
+        更新GPS位置
+
+        Args:
+            latitude: 纬度
+            longitude: 经度
+            altitude: 海拔（可选）
+            accuracy: 精度（可选）
+
+        Returns:
+            是否更新成功
+        """
+        if not self.enable_navigation or not self.nav_context:
+            return False
+
+        try:
+            location = GPSLocation(
+                latitude=latitude,
+                longitude=longitude,
+                altitude=altitude,
+                accuracy=accuracy,
+                timestamp=time.time()
+            )
+
+            return self.nav_context.update_location(location)
+
+        except Exception as e:
+            logger.error(f"更新GPS位置失败: {e}")
+            return False
+
+    def start_navigation(self, destination_lat: float, destination_lon: float) -> bool:
+        """开始导航"""
+        if not self.enable_navigation or not self.nav_context:
+            logger.warning("导航功能未启用")
+            return False
+
+        try:
+            destination = GPSLocation(
+                latitude=destination_lat,
+                longitude=destination_lon,
+                timestamp=time.time()
+            )
+
+            success = self.nav_context.start_navigation(destination)
+            if success:
+                logger.info("导航已开始")
+            return success
+
+        except Exception as e:
+            logger.error(f"开始导航失败: {e}")
+            return False
+
+    def stop_navigation(self):
+        """停止导航"""
+        if self.nav_context:
+            self.nav_context.stop_navigation()
+            logger.info("导航已停止")
+
+    def get_navigation_status(self) -> Dict[str, Any]:
+        """获取导航状态"""
+        if not self.enable_navigation or not self.nav_context:
+            return {"enabled": False}
+
+        try:
+            context = self.nav_context.get_context()
+            stats = self.nav_context.get_navigation_stats()
+
+            return {
+                "enabled": True,
+                "mode": context.navigation_mode.value,
+                "state": context.navigation_state.value,
+                "has_destination": context.destination is not None,
+                "current_location": {
+                    "latitude": context.current_location.latitude if context.current_location else None,
+                    "longitude": context.current_location.longitude if context.current_location else None
+                } if context.current_location else None,
+                "destination": {
+                    "latitude": context.destination.latitude if context.destination else None,
+                    "longitude": context.destination.longitude if context.destination else None
+                } if context.destination else None,
+                "distance_to_destination": context.distance_to_destination,
+                "current_instruction": context.current_instruction,
+                "stats": stats
+            }
+
+        except Exception as e:
+            logger.error(f"获取导航状态失败: {e}")
+            return {"enabled": True, "error": str(e)}
             
             # 更新子组件参数
             if key == "confidence_threshold" and self.detector:

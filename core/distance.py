@@ -134,6 +134,7 @@ class ZoeDepthDistanceMeasurement:
     
 
     def load_model(self):
+        """加载ZoeDepth模型，包含错误处理和备用方案"""
         try:
             cache_key = f"{self.model_type}_{self.device}"
             if self.enable_cache and cache_key in self._model_cache:
@@ -144,34 +145,83 @@ class ZoeDepthDistanceMeasurement:
 
             logger.info(f"Loading ZoeDepth model: {self.model_type}")
 
-            # 仅示例  — 你已在 __init__ 里将 models 目录加入 sys.path
+            # 检查timm版本兼容性
+            try:
+                import timm
+                timm_version = timm.__version__
+                logger.info(f"Using timm version: {timm_version}")
+
+                # 检查是否为兼容版本
+                if not timm_version.startswith('0.6.'):
+                    logger.warning(f"timm version {timm_version} may not be compatible with ZoeDepth. Recommended: 0.6.7")
+            except ImportError:
+                logger.error("timm library not found. Please install: pip install timm==0.6.7")
+                raise
+
+            # 设置模型路径
             project_root = Path(__file__).parent.parent
             if self.model_path is not None:
                 local_weights = Path(self.model_path)
             else:
                 local_weights = project_root / "models" / "ZoeD_M12_NK.pt"
 
-            # 强制使用 zoedepth_nk 结构
-            config = get_config("zoedepth_nk", "infer")
-            config.pretrained_resource = f"local::{local_weights}"
+            # 检查模型文件是否存在
+            if not local_weights.exists():
+                logger.error(f"Model weights not found: {local_weights}")
+                raise FileNotFoundError(f"Model weights not found: {local_weights}")
 
-            # 其他自定义配置（如输入尺寸）
-            config.input_width, config.input_height = self.input_size
-            config.absolute_depth = self.enable_absolute_depth
-            config.scale_factor   = self.depth_scale_factor
+            # 尝试加载配置和模型
+            try:
+                # 强制使用 zoedepth_nk 结构
+                config = get_config("zoedepth_nk", "infer")
+                config.pretrained_resource = f"local::{local_weights}"
 
-            self.model = build_model(config)
-            self.model.to(self.device).eval()
+                # 其他自定义配置（如输入尺寸）
+                config.input_width, config.input_height = self.input_size
+                config.absolute_depth = self.enable_absolute_depth
+                config.scale_factor = self.depth_scale_factor
 
-            if self.enable_cache:
-                self._model_cache[cache_key] = self.model
+                # 构建模型
+                self.model = build_model(config)
+                self.model.to(self.device).eval()
 
-            self.model_loaded = True
-            logger.info("✅ ZoeDepth model loaded successfully")
+                if self.enable_cache:
+                    self._model_cache[cache_key] = self.model
+
+                self.model_loaded = True
+                logger.info("✅ ZoeDepth model loaded successfully")
+
+            except Exception as model_error:
+                logger.error(f"Failed to build ZoeDepth model: {model_error}")
+                # 尝试备用加载方法
+                self._try_fallback_loading(local_weights)
 
         except Exception as e:
             logger.error(f"❌ Failed to load ZoeDepth model: {e}", exc_info=True)
-            raise   
+            raise
+
+    def _try_fallback_loading(self, model_path: Path):
+        """尝试备用模型加载方法"""
+        logger.info("Attempting fallback model loading...")
+        try:
+            # 尝试直接加载PyTorch模型
+            import torch
+            state_dict = torch.load(model_path, map_location=self.device)
+            logger.info("Model state dict loaded, attempting to reconstruct model...")
+
+            # 这里可以添加更多的备用加载逻辑
+            # 目前先抛出异常，提示用户检查环境
+            raise RuntimeError("Fallback loading not implemented. Please check timm version compatibility.")
+
+        except Exception as fallback_error:
+            logger.error(f"Fallback loading also failed: {fallback_error}")
+            raise RuntimeError(
+                f"Failed to load ZoeDepth model. Please check:\n"
+                f"1. timm version (should be 0.6.7): pip install timm==0.6.7\n"
+                f"2. Model file exists: {model_path}\n"
+                f"3. PyTorch compatibility\n"
+                f"Original error: {fallback_error}"
+            )
     
     def ensure_model_loaded(self):
             """Ensure model is loaded before use"""

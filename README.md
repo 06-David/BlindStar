@@ -1,101 +1,61 @@
-# BlindStar - 智能视觉辅助系统
+# BlindStar 盲人语音助手
 
-> 基于YOLOv8/YOLO11和ZoeDepth的模块化计算机视觉系统，专为视障人士提供智能导航和环境感知，集成语音交互、POI查询和高德地图导航功能
+## 🌟 项目简介
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![YOLOv8](https://img.shields.io/badge/YOLOv8-Latest-green.svg)](https://github.com/ultralytics/ultralytics)
-[![OpenCV](https://img.shields.io/badge/OpenCV-4.8+-orange.svg)](https://opencv.org)
-[![ZoeDepth](https://img.shields.io/badge/ZoeDepth-Depth-purple.svg)](https://github.com/isl-org/ZoeDepth)
-[![Vosk](https://img.shields.io/badge/Vosk-STT-red.svg)](https://alphacephei.com/vosk)
-[![高德地图](https://img.shields.io/badge/高德地图-Navigation-blue.svg)](https://lbs.amap.com)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+BlindStar 是一个专为视障人士设计的智能语音导航助手，提供完全语音化的交互体验。通过先进的语音识别、地图导航和语音播报技术，为盲人用户提供安全、便捷的出行辅助服务。
 
-## 🎯 项目概述
+## ⚡ 快速开始
 
-BlindStar是一个专为视障人士设计的智能视觉辅助系统，集成了先进的计算机视觉技术，提供实时的环境感知、物体识别和导航辅助功能。
-
-### ✨ 核心功能
-
-- **🔍 智能物体检测** - 基于YOLOv8/YOLO11，内置 COCO-80 类别，支持自定义训练权重
-- **📏 精确距离测量** - ZoeDepth深度估计，提供更准确的空间信息
-- **🏃 运动分析** - 实时速度计算和轨迹跟踪
-- **🎵 语音交互** - 基于Vosk的离线语音识别和pyttsx3+SAPI双引擎语音合成
-- **🗺️ 智能导航** - 集成高德地图API，支持POI查询和语音导航
-- **🎬 视频处理** - 支持实时和批量视频分析
-- **🔧 模块化设计** - 易于集成和扩展的组件架构
-
-## 🚀 快速开始
-
-### 环境要求
-
-- Python 3.8+
-- CUDA支持的GPU (推荐)
-- 摄像头设备 (实时检测)
-
-### 安装步骤
-
+### 1. 安装依赖
 ```bash
-# 1. 克隆项目
-git clone https://github.com/your-repo/BlindStar.git
-cd BlindStar
-
-# 2. 激活conda环境
-conda activate yolov8
-
-# 3. 安装依赖
 pip install -r requirements.txt
-
-# 4. 开始使用
-python main.py --source 0  # 摄像头检测
-
 ```
 
-### 基本使用
+### 2. 下载语音模型
+- 下载 `vosk-model-cn-0.22` 中文语音识别模型
+- 解压到 `models/vosk-model-cn-0.22/` 目录
 
+### 3. 启动程序
 ```bash
-# 实时摄像头检测（完整功能）
-python main.py --source 0
-
-# 启用语音导航功能
-python main.py --source 0 --module vision voice distance poi navigation
-
-# 处理视频文件
-python main.py --source video.mp4 --save-video output.mp4
-
-# 批量处理图片（使用测试脚本）
-python tests/batch_image_analysis.py --input images/ --weights yolov8s.pt --with-depth
-
-# 调整检测参数
-python main.py --source 0 --conf 0.7 --model large
-
-# 生成深度可视化视频 (ZoeDepth)
-python tests/generate_depth_video.py --source input.mp4 --model DPT_Large --device cuda
+python blind_voice_assistant.py
 ```
 
-## 📚 更多文档
+或双击运行：`启动盲人助手.bat`
 
-- [项目背景与技术栈](docs/project_context.md)
-- [实时启动器指南](docs/realtime_launcher.md)
-- [项目架构](docs/architecture.md)
-- [编程接口与输出格式](docs/api_reference.md)
-- [系统配置](docs/configuration.md)
-- [性能指标](docs/performance.md)
-- [开发指南](docs/development_guide.md)
-- [故障排除与技术支持](docs/troubleshooting.md)
+## 🎵 基本语音指令
 
-## 🙏 致谢
+- **"导航到烟台大学"** - 开始导航
+- **"附近银行"** - 查找附近银行
+- **"位置"** - 播报当前位置
+- **"帮助"** - 获取功能说明
+- **"退出"** - 退出程序
 
-- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) - 物体检测框架
-- [ZoeDepth](https://github.com/isl-org/ZoeDepth) - 高精度深度估计模型
-- [OpenCV](https://opencv.org) - 计算机视觉库
-- [Vosk](https://alphacephei.com/vosk) - 离线语音识别引擎
-- [高德地图API](https://lbs.amap.com) - 地图服务和导航功能
-- [pyttsx3](https://github.com/nateshmbhat/pyttsx3) - 文本转语音引擎
+## 📖 完整文档
 
-## 📄 许可证
+详细的使用说明、配置方法和故障排除，请查看：
 
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+**[📋 BlindStar 完整使用指南](BlindStar_完整使用指南.md)**
+
+## 🎯 主要功能
+
+- 🗺️ **语音导航**：基于高德地图的精确步行导航
+- 📍 **位置服务**：精确定位和周边环境描述
+- 🏪 **地点查询**：附近银行、医院、超市、餐厅搜索
+- 🎤 **语音交互**：完全语音化操作，无需视觉
+
+## 🛡️ 安全提醒
+
+本系统仅供辅助使用，实际出行时请：
+- 结合其他导航工具
+- 注意交通安全
+- 遇困难时寻求帮助
+
+## 📞 技术支持
+
+- **问题反馈**：提交GitHub Issue
+- **使用帮助**：查看完整使用指南
+- **技术交流**：参与项目讨论
 
 ---
 
-**BlindStar** - 让视觉无障碍，让世界更清晰 🌟
+**BlindStar - 让世界触手可及** 🌟

@@ -1,0 +1,187 @@
+# BlindStar 导航配置文件
+# 配置导航功能的各项参数
+
+navigation:
+  # 基础设置
+  enabled: true
+  mode: "assist"  # assist, guide, full
+  
+  # GPS设置
+  gps:
+    update_interval: 1.0  # GPS更新间隔(秒)
+    accuracy_threshold: 10.0  # 精度阈值(米)
+    location_update_threshold: 5.0  # 位置更新阈值(米)
+    arrival_threshold: 10.0  # 到达阈值(米)
+    waypoint_threshold: 20.0  # 路径点阈值(米)
+    max_history_size: 100  # 历史记录最大长度
+    
+  # 地图服务
+  map_service:
+    provider: "amap"  # 高德地图
+    api_key: "${AMAP_API_KEY}"  # 从环境变量读取
+    api_secret: "${AMAP_API_SECRET}"  # 从环境变量读取
+    cache_enabled: true
+    offline_maps: true
+    request_timeout: 30  # 请求超时时间(秒)
+    retry_times: 3  # 重试次数
+    
+  # 路径规划
+  routing:
+    mode: "walking"  # 出行方式: walking, driving, transit
+    avoid_stairs: true  # 避开楼梯
+    avoid_construction: true  # 避开施工区域
+    prefer_sidewalks: true  # 优先人行道
+    prefer_accessible_routes: true  # 优先无障碍路线
+    max_detour_ratio: 1.5  # 最大绕行比例
+    
+  # 语音设置
+  voice:
+    navigation_voice: true  # 启用导航语音
+    instruction_interval: 50  # 指令播报间隔(米)
+    hazard_priority: true  # 危险提醒优先级
+    voice_rate: 150  # 语速
+    voice_volume: 1.0  # 音量
+    emergency_override: true  # 紧急情况覆盖
+    
+    # 语音播报优先级设置
+    priority_settings:
+      emergency: 0.0  # 紧急情况立即播报
+      high: 0.2  # 高优先级短冷却
+      normal: 0.5  # 正常冷却
+      low: 2.0  # 低优先级长冷却
+    
+  # 决策融合
+  fusion:
+    vision_weight: 0.7  # 视觉决策权重
+    navigation_weight: 0.3  # 导航决策权重
+    emergency_override: true  # 紧急情况覆盖
+    instruction_interval: 5.0  # 指令播报间隔(秒)
+    hazard_priority: true  # 危险提醒优先级
+    max_history_size: 50  # 决策历史最大长度
+    
+  # POI查询设置
+  poi:
+    default_radius: 1000  # 默认搜索半径(米)
+    max_results: 20  # 最大返回结果数
+    max_announce_results: 3  # 最大播报结果数
+    enable_pinyin_matching: true  # 启用拼音匹配
+    
+    # POI类型映射
+    poi_types:
+      餐厅: "050000"
+      酒店: "100000"
+      购物: "060000"
+      生活服务: "070000"
+      汽车服务: "080000"
+      交通设施: "150000"
+      金融保险: "090000"
+      公司企业: "170000"
+      政府机构: "130000"
+      医疗保健: "110000"
+      住宿服务: "100000"
+      风景名胜: "110000"
+      商务住宅: "120000"
+      科教文化: "140000"
+      娱乐休闲: "080000"
+      体育休闲: "080000"
+      
+  # 安全设置
+  safety:
+    enable_hazard_detection: true  # 启用危险检测
+    emergency_stop_distance: 2.0  # 紧急停止距离(米)
+    warning_distance: 5.0  # 警告距离(米)
+    safe_distance: 10.0  # 安全距离(米)
+    
+    # 危险等级设置
+    risk_levels:
+      L0: "提示指引"  # 路面标线、导盲砖
+      L1: "避让绕行"  # 行人、自行车、路灯杆
+      L2: "高危预警"  # 汽车、摩托车、卡车
+      L3: "强制停止"  # 红灯、停止标志、护栏
+      
+  # 性能设置
+  performance:
+    max_processing_fps: 15.0  # 最大处理帧率
+    enable_multithreading: true  # 启用多线程
+    cache_size: 10  # 缓存大小
+    enable_gpu_acceleration: true  # 启用GPU加速
+    
+  # 调试设置
+  debug:
+    enable_logging: true  # 启用日志
+    log_level: "INFO"  # 日志级别
+    enable_performance_monitoring: true  # 启用性能监控
+    save_debug_data: false  # 保存调试数据
+    
+# 环境变量默认值（如果未设置）
+defaults:
+  AMAP_API_KEY: "717d9a827c0ac3521932d3ae59aebbfe"
+  AMAP_API_SECRET: ""
+  
+# 模式预设
+mode_presets:
+  assist:
+    description: "辅助模式 - 仅提供危险提醒"
+    navigation:
+      mode: "assist"
+      voice:
+        instruction_interval: 100
+        hazard_priority: true
+      fusion:
+        vision_weight: 0.8
+        navigation_weight: 0.2
+        
+  guide:
+    description: "引导模式 - 提供方向指引"
+    navigation:
+      mode: "guide"
+      voice:
+        instruction_interval: 50
+        hazard_priority: true
+      fusion:
+        vision_weight: 0.7
+        navigation_weight: 0.3
+        
+  full:
+    description: "完全导航 - 完整路径规划"
+    navigation:
+      mode: "full"
+      voice:
+        instruction_interval: 30
+        hazard_priority: true
+      fusion:
+        vision_weight: 0.6
+        navigation_weight: 0.4
+        
+# 语音命令配置
+voice_commands:
+  navigation:
+    - "开始导航"
+    - "结束导航"
+    - "暂停导航"
+    - "继续导航"
+    - "重新规划"
+    - "当前位置"
+    - "剩余距离"
+    - "下一个路口"
+    - "导航到"
+    - "导航去"
+    - "导航状态"
+    - "导航帮助"
+    
+  poi:
+    - "附近有什么"
+    - "查找"
+    - "搜索"
+    - "找"
+    - "在哪里"
+    
+  system:
+    - "开始检测"
+    - "停止检测"
+    - "开始录制"
+    - "停止录制"
+    - "退出系统"
+    - "帮助"
+    - "暂停"
+    - "继续"

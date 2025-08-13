@@ -94,17 +94,29 @@ class NavigationContext:
 
 class NavigationContextManager:
     """导航上下文管理器"""
-    
+
     def __init__(self, mode: NavigationMode = NavigationMode.ASSIST):
         self.context = NavigationContext(navigation_mode=mode)
         self.logger = logging.getLogger(__name__)
-        
+
         # 配置参数
         self.location_update_threshold = 5.0  # 位置更新阈值(米)
         self.arrival_threshold = 10.0         # 到达阈值(米)
         self.waypoint_threshold = 20.0        # 路径点阈值(米)
         self.max_history_size = 100           # 历史记录最大长度
-        
+
+        # 导航服务集成
+        self.map_service = None               # 地图服务实例
+        self.poi_service = None               # POI查询服务实例
+
+        # 性能统计
+        self.stats = {
+            'location_updates': 0,
+            'navigation_instructions': 0,
+            'route_recalculations': 0,
+            'last_update_time': time.time()
+        }
+
         self.logger.info(f"[导航] 初始化导航上下文管理器，模式: {mode.value}")
     
     def update_location(self, location: GPSLocation) -> bool:
@@ -114,29 +126,37 @@ class NavigationContextManager:
             if not self._is_valid_location(location):
                 self.logger.warning(f"[导航] 无效的GPS位置: {location}")
                 return False
-            
+
             # 检查是否需要更新
             if self.context.current_location:
                 distance = location.distance_to(self.context.current_location)
                 if distance < self.location_update_threshold:
                     return False  # 位置变化不大，不更新
-            
+
             # 更新位置
             old_location = self.context.current_location
             self.context.current_location = location
-            
+
             # 添加到历史记录
             self.context.location_history.append(location)
             if len(self.context.location_history) > self.max_history_size:
                 self.context.location_history.pop(0)
-            
+
+            # 更新统计信息
+            self.stats['location_updates'] += 1
+            self.stats['last_update_time'] = time.time()
+
             self.logger.info(f"[导航] 位置更新: ({location.latitude:.6f}, {location.longitude:.6f})")
-            
+
             # 更新导航状态
             self._update_navigation_state()
-            
+
+            # 检查是否需要重新规划路径
+            if self._should_recalculate_route(old_location, location):
+                self._recalculate_route()
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"[导航] 位置更新失败: {e}")
             return False
@@ -291,7 +311,139 @@ class NavigationContextManager:
             "北", "东北", "东", "东南",
             "南", "西南", "西", "西北"
         ]
-        
+
         # 将360度分为8个方向
         index = int((bearing + 22.5) / 45) % 8
         return directions[index]
+
+    def set_map_service(self, map_service) -> bool:
+        """
+        设置地图服务
+
+        Args:
+            map_service: 地图服务实例
+
+        Returns:
+            是否设置成功
+        """
+        try:
+            if map_service is None:
+                self.logger.warning("[导航] 地图服务实例为空")
+                return False
+
+            self.map_service = map_service
+            self.logger.info("[导航] 地图服务已设置")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"[导航] 设置地图服务失败: {e}")
+            return False
+
+    def set_poi_service(self, poi_service) -> bool:
+        """
+        设置POI查询服务
+
+        Args:
+            poi_service: POI查询服务实例
+
+        Returns:
+            是否设置成功
+        """
+        try:
+            if poi_service is None:
+                self.logger.warning("[导航] POI服务实例为空")
+                return False
+
+            self.poi_service = poi_service
+            self.logger.info("[导航] POI服务已设置")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"[导航] 设置POI服务失败: {e}")
+            return False
+
+    def start_navigation(self, destination: GPSLocation) -> bool:
+        """开始导航"""
+        if self.set_destination(destination):
+            self.context.navigation_state = NavigationState.NAVIGATING
+            self.logger.info("[导航] 导航已开始")
+            return True
+        return False
+
+    def stop_navigation(self):
+        """停止导航"""
+        self.context.navigation_state = NavigationState.IDLE
+        self.context.destination = None
+        self.context.route_points.clear()
+        self.context.current_route_index = 0
+        self.logger.info("[导航] 导航已停止")
+
+    def pause_navigation(self):
+        """暂停导航"""
+        if self.context.navigation_state == NavigationState.NAVIGATING:
+            self.context.navigation_state = NavigationState.IDLE
+            self.logger.info("[导航] 导航已暂停")
+
+    def resume_navigation(self):
+        """恢复导航"""
+        if self.context.destination and self.context.navigation_state == NavigationState.IDLE:
+            self.context.navigation_state = NavigationState.NAVIGATING
+            self.logger.info("[导航] 导航已恢复")
+
+    def get_navigation_stats(self) -> Dict[str, Any]:
+        """获取导航统计信息"""
+        return {
+            **self.stats,
+            'current_state': self.context.navigation_state.value,
+            'current_mode': self.context.navigation_mode.value,
+            'has_destination': self.context.destination is not None,
+            'distance_to_destination': self.context.distance_to_destination,
+            'route_progress': self._get_route_progress()
+        }
+
+    def _should_recalculate_route(self, old_location: Optional[GPSLocation],
+                                 new_location: GPSLocation) -> bool:
+        """判断是否需要重新规划路径"""
+        if not old_location or not self.context.destination:
+            return False
+
+        # 如果偏离路径太远，需要重新规划
+        if self.context.route_points and len(self.context.route_points) > 1:
+            # 简化判断：如果距离路径点太远
+            if (self.context.current_route_index < len(self.context.route_points) and
+                new_location.distance_to(self.context.route_points[self.context.current_route_index]) > 100):
+                return True
+
+        return False
+
+    def _recalculate_route(self):
+        """重新规划路径"""
+        if self.map_service and self.context.current_location and self.context.destination:
+            try:
+                # 调用地图服务重新规划路径
+                new_route = self.map_service.get_route(
+                    self.context.current_location,
+                    self.context.destination
+                )
+                if new_route:
+                    self.context.route_points = new_route
+                    self.context.current_route_index = 0
+                    self.context.navigation_state = NavigationState.REROUTING
+                    self.stats['route_recalculations'] += 1
+                    self.logger.info("[导航] 路径重新规划完成")
+            except Exception as e:
+                self.logger.error(f"[导航] 路径重新规划失败: {e}")
+        else:
+            # 使用简化的重新规划
+            self._plan_route()
+
+    def _get_route_progress(self) -> float:
+        """获取路径进度(0-1)"""
+        if not self.context.route_points or not self.context.current_location:
+            return 0.0
+
+        total_points = len(self.context.route_points)
+        if total_points <= 1:
+            return 1.0 if self.context.navigation_state == NavigationState.ARRIVED else 0.0
+
+        return min(self.context.current_route_index / (total_points - 1), 1.0)

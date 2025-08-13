@@ -24,6 +24,8 @@ from .risk_assessor import RiskAssessor, ObjectRisk, RiskLevel
 from .action_planner import ActionPlanner, ActionPlan, ActionType
 from .depth_hazard_detector import DepthHazardDetector, DepthHazard, DepthHazardType
 from .realtime_video_analyzer import RealtimeVideoAnalyzer, analyze_video_realtime
+from .navigation_context import NavigationContextManager, NavigationMode, NavigationState, GPSLocation
+from .navigation_fusion import NavigationDecisionFusion, NavigationDecision
 
 # Optional imports with fallback
 try:
@@ -75,5 +77,12 @@ __all__ = [
     'DepthHazard',
     'DepthHazardType',
     'RealtimeVideoAnalyzer',
-    'analyze_video_realtime'
+    'analyze_video_realtime',
+    # 导航模块
+    'NavigationContextManager',
+    'NavigationMode',
+    'NavigationState',
+    'GPSLocation',
+    'NavigationDecisionFusion',
+    'NavigationDecision'
 ]
