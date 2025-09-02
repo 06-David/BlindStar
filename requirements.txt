@@ -24,9 +24,10 @@ tqdm>=4.65.0
 # Text-to-speech
 pyttsx3>=2.90
 
-# Speech recognition (Vosk)
-vosk>=0.3.45
+# Speech recognition
+speechrecognition>=3.8.1
 pyaudio>=0.2.11
+vosk>=0.3.45  # 备选语音识别引擎
 
 # Optional: Text-to-speech (Windows)
 pywin32>=306; sys_platform == "win32"
@@ -43,5 +44,18 @@ flake8>=6.0.0
 # Navigation and POI services
 requests>=2.25.1
 geopy>=2.3.0  # 用于距离计算
-pypinyin  # 新增拼音库，用于POI查询的拼音匹配
-regex    # 新增正则表达式库，用于语音命令解析
+pypinyin>=0.47.0  # 新增拼音库，用于POI查询的拼音匹配
+regex>=2023.6.3    # 新增正则表达式库，用于语音命令解析
+
+# Enhanced navigation dependencies
+urllib3>=1.26.0  # HTTP客户端库
+hashlib  # 哈希计算（Python内置）
+sqlite3  # SQLite数据库（Python内置）
+threading  # 多线程支持（Python内置）
+dataclasses  # 数据类支持（Python内置）
+enum  # 枚举类型（Python内置）
+pathlib  # 路径操作（Python内置）
+collections  # 集合类型（Python内置）
+pickle  # 序列化支持（Python内置）
+gzip  # 压缩支持（Python内置）
+openpyxl>=3.1.0  # Excel文件读取，用于POI编码表

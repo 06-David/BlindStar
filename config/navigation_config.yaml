@@ -18,8 +18,8 @@ navigation:
   # 地图服务
   map_service:
     provider: "amap"  # 高德地图
-    api_key: "${AMAP_API_KEY}"  # 从环境变量读取
-    api_secret: "${AMAP_API_SECRET}"  # 从环境变量读取
+    api_key: "请填写你的key"  # 直接设置API密钥
+    api_secret: ""  # API密钥密文
     cache_enabled: true
     offline_maps: true
     request_timeout: 30  # 请求超时时间(秒)
